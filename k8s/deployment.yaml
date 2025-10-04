@@ -1,0 +1,114 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${serviceName}-deployment
+  labels:
+    app: ${serviceName}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${serviceName}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: ${serviceName}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: ${serviceName}-container
+          image: ${DO_REGISTRY_HOST}/${serviceName}:${version}
+          ports:
+            - containerPort: 5001
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            runAsNonRoot: true
+          env:
+            - name: FLASK_ENV
+              value: production
+            - name: FLASK_DEBUG
+              value: "0"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${serviceName}-service
+spec:
+  type: NodePort
+  selector:
+    app: ${serviceName}
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5001
+      nodePort: 30185
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${serviceName}-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - ${INGRESS_URL}
+      secretName: ${serviceName}-tls-secret
+  rules:
+    - host: ${INGRESS_URL}
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: ${serviceName}-service
+                port:
+                  number: 5000
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ${serviceName}-tls-secret
+  namespace: ${TARGET_NAMESPACE}
+type: kubernetes.io/tls
+data:
+  tls.crt: ${TLS_CRT_BASE64}
+  tls.key: ${TLS_KEY_BASE64}
