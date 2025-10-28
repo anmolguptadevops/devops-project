@@ -218,7 +218,7 @@ The following credentials need to be created in Jenkins:
 | ------------------------ | ------------------------ | --------------------------------------------------- |
 | `GITHUB_CRED`            | `GITHUB_CRED`            | GitHub username and password credentials.           |
 | `container_registry_creds` | `container_registry_creds` | Credentials for the container registry.             |
-| `digitalocean_registry`  | `digitalocean_registry`  | Credentials for the DigitalOcean container registry.  |
+| `digitalocean_registry`  | `digitalocean_registry`  | DigitalOcean container registry host.               |
 | `kubeconfig`             | `kubeconfig (kubeconfig)`| The Kubernetes configuration file.                  |
 | `tls_crt`                | `tls_crt`                | The TLS certificate.                                |
 | `tls_key`                | `tls_key`                | The TLS private key.                                |
