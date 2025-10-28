@@ -6,8 +6,8 @@ def call() {
 
     withCredentials([
         file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE'),
-        string(credentialsId: 'tls_crt', variable: 'TLS_CRT'),
-        string(credentialsId: 'tls_key', variable: 'TLS_KEY')
+        file(credentialsId: 'tls_crt', variable: 'TLS_CRT_FILE'),
+        file(credentialsId: 'tls_key', variable: 'TLS_KEY_FILE')
     ]) {
         withEnv([
             "KUBECONFIG=${KUBECONFIG_FILE}",
@@ -17,9 +17,8 @@ def call() {
             "TARGET_NAMESPACE=${TARGET_NAMESPACE}"
         ]) {
 
-            // Base64 encode TLS cert/key dynamically
-            def tlsCrtBase64 = sh(script: "echo '${TLS_CRT}' | base64 -w0", returnStdout: true).trim()
-            def tlsKeyBase64 = sh(script: "echo '${TLS_KEY}' | base64 -w0", returnStdout: true).trim()
+            def tlsCrtBase64 = sh(script: "base64 -w0 ${TLS_CRT_FILE}", returnStdout: true).trim()
+            def tlsKeyBase64 = sh(script: "base64 -w0 ${TLS_KEY_FILE}", returnStdout: true).trim()
 
             env.TLS_CRT_BASE64 = tlsCrtBase64
             env.TLS_KEY_BASE64 = tlsKeyBase64
@@ -27,11 +26,10 @@ def call() {
             sh '''
                 echo "Rendering manifest..."
                 envsubst < ${MANIFEST_FILE} > updated.yaml
-                cat updated.yaml
                 kubectl apply -f updated.yaml -n ${TARGET_NAMESPACE}
             '''
         }
     }
 
-    echo " Deployment done successfully."
+    echo "Deployment done successfully."
 }
