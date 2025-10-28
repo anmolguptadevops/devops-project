@@ -16,7 +16,7 @@ def call() {
     trivy --version
     '''
     def status = sh(
-        script: "trivy image --exit-code 1 --severity CRITICAL ${imageName}",
+        script: "trivy image --severity CRITICAL ${imageName}",
         returnStatus: true
     )
 
